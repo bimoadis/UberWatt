@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+frontend/node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Python caches and bytecode
+__pycache__/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/*/__pycache__/
+backend/tests/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# OS and IDE temporary files
+.DS_Store
+Thumbs.db
+*.log

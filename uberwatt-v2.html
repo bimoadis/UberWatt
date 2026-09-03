@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ÜberWatt — run when power is free. Stop when it is not.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=Spectral:ital,wght@0,400;1,400;1,600&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7EFDF;--panel:#F5F9F0;--panel-hi:#FBFDF8;
+  --ink:#16241A;--ink-2:#3E5142;--ink-3:#556A59;
+  --line:#C9D9BC;--line-soft:#DCE8D2;
+  --green:#2E7D32;--green-d:#1B5E20;--volt:#7FB800;
+  --rust:#C4501C;--rust-soft:#E8B79E;--sky:#3D6E8F;
+  --r:4px;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:'Archivo','Noto Sans SC',system-ui,sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:linear-gradient(to right,rgba(22,36,26,.035) 1px,transparent 1px),linear-gradient(to bottom,rgba(22,36,26,.035) 1px,transparent 1px);
+  background-size:34px 34px;
+}
+html[lang="zh"] body{font-family:'Noto Sans SC','Archivo',system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.de{font-family:'Spectral',Georgia,serif;font-style:italic}
+html[lang="zh"] .de{font-family:'Noto Sans SC',serif;font-style:normal}
+
+header{position:sticky;top:0;z-index:60;background:rgba(231,239,223,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:18px;height:62px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:20px;letter-spacing:-.03em;text-decoration:none;flex:none}
+.brand .mk{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(46,125,50,.16);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(46,125,50,.14)}50%{box-shadow:0 0 0 8px rgba(46,125,50,.05)}}
+.navlinks{display:flex;gap:18px;margin-left:auto;font-size:14px;font-weight:500;color:var(--ink-2)}
+.navlinks a{text-decoration:none;padding:4px 0;border-bottom:1.5px solid transparent;white-space:nowrap}
+.navlinks a:hover{border-bottom-color:var(--green);color:var(--ink)}
+.langsel{display:flex;gap:1px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none;margin-left:auto}
+.navlinks + .langsel{margin-left:0}
+.langsel button{font:inherit;font-size:12.5px;font-weight:600;padding:5px 10px;border:0;background:var(--panel-hi);color:var(--ink-3);cursor:pointer}
+.langsel button[aria-pressed="true"]{background:var(--ink);color:var(--panel-hi)}
+.demo-flag{font-size:11px;font-weight:600;color:var(--rust);border:1px solid var(--rust-soft);background:#FBEEE7;padding:3px 8px;border-radius:100px;white-space:nowrap;flex:none}
+@media(max-width:1080px){.navlinks{display:none}}
+@media(max-width:520px){.demo-flag{display:none}}
+
+.hero{padding:54px 0 12px}
+.hero h1{font-size:clamp(32px,5.4vw,60px);line-height:1.03;font-weight:900;letter-spacing:-.035em;max-width:17ch}
+.hero .lede{margin-top:20px;max-width:62ch;font-size:clamp(16px,1.7vw,19px);color:var(--ink-2)}
+.sig{margin-top:20px;padding-left:16px;border-left:2px solid var(--volt);font-size:17px;color:var(--green-d);max-width:48ch}
+.who-for{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.who-for span{font-size:13px;font-weight:600;color:var(--ink-2);border:1px solid var(--line);background:var(--panel-hi);padding:5px 12px;border-radius:100px}
+
+.console{margin-top:32px;background:var(--panel-hi);border:1px solid var(--line);border-radius:6px;position:relative}
+.console-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:var(--panel);border-radius:6px 6px 0 0}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{font:inherit;font-size:13px;font-weight:600;cursor:pointer;background:transparent;border:1px solid transparent;color:var(--ink-3);padding:6px 12px;border-radius:var(--r)}
+.tab:hover{color:var(--ink);background:var(--panel-hi)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--panel-hi)}
+.status-pill{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:100px;border:1px solid var(--line);background:var(--panel-hi)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.status-pill.run{color:var(--green-d);border-color:#BFD9C0;background:#EDF6ED}
+.status-pill.run .dot{background:var(--green);animation:blink 1.8s infinite}
+.status-pill.stop{color:var(--rust);border-color:var(--rust-soft);background:#FBEEE7}
+.status-pill.stop .dot{background:var(--rust)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:760px){
+  .tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{white-space:nowrap;flex:none}
+  .status-pill{margin-left:0;width:100%;justify-content:center}
+}
+
+.viewrow{display:flex;align-items:center;gap:10px;padding:12px 16px 0;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;padding:5px 12px;border:0;background:var(--panel-hi);color:var(--ink-3);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--green-d);color:#F2F8EE}
+svg.curve{display:block;width:100%;height:auto;touch-action:none}
+.chart-area{padding:6px 6px 0}
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:2px 16px 12px;font-size:12.5px;color:var(--ink-2)}
+.legend i{display:inline-block;width:15px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+.calc{border-top:1px solid var(--line-soft);padding:18px 16px;background:var(--panel)}
+.calc-head{font-size:14px;font-weight:700;margin-bottom:2px}
+.calc-hint{font-size:13px;color:var(--ink-3);margin-bottom:16px}
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.sliders{grid-template-columns:1fr;gap:14px}}
+.sl label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:4px;gap:10px}
+.sl label b{font-family:var(--mono);font-size:15px;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--line);border-radius:2px}
+input[type=range]::-moz-range-track{height:3px;background:var(--line);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--panel-hi);margin-top:-7px;box-shadow:0 0 0 1px var(--ink)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:3px solid var(--panel-hi);box-shadow:0 0 0 1px var(--ink)}
+
+.readout{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line-soft)}
+.cell{padding:16px;border-right:1px solid var(--line-soft)}
+.cell:last-child{border-right:0}
+.cell .k{font-size:12.5px;color:var(--ink-3);font-weight:500}
+.cell .v{font-size:clamp(19px,2.5vw,26px);font-weight:700;margin-top:3px;letter-spacing:-.02em}
+.cell .s{font-size:12px;color:var(--ink-3);margin-top:2px}
+.v.hot{color:var(--rust)}.v.good{color:var(--green-d)}
+@media(max-width:720px){.readout{grid-template-columns:repeat(2,1fr)}.cell:nth-child(2){border-right:0}.cell:nth-child(-n+2){border-bottom:1px solid var(--line-soft)}}
+
+section{padding:74px 0;border-top:1px solid var(--line-soft);scroll-margin-top:84px}
+section h2{font-size:clamp(25px,3.4vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.14;max-width:22ch}
+section .sub{margin-top:12px;color:var(--ink-2);max-width:64ch;font-size:16.5px}
+
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:34px;background:var(--line-soft);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.strip>div{background:var(--panel-hi);padding:24px}
+.strip .big{font-size:clamp(27px,4vw,38px);font-weight:800;letter-spacing:-.03em;color:var(--rust)}
+.strip p{margin-top:8px;font-size:14.5px;color:var(--ink-2)}
+@media(max-width:760px){.strip{grid-template-columns:1fr}}
+
+.tl{margin-top:32px;border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);overflow:hidden}
+.tl-head{background:var(--panel);font-size:12.5px;color:var(--ink-3);font-weight:600;padding:10px 16px;border-bottom:1px solid var(--line)}
+.tl-row{display:grid;grid-template-columns:82px 1fr 92px 96px;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line-soft)}
+.tl-row:last-child{border-bottom:0}
+.tl-row .time{font-size:13.5px;font-weight:600}
+.bar-track{height:22px;background:#EDF3E7;border-radius:3px;position:relative;overflow:hidden}
+.bar-fill{position:absolute;top:0;bottom:0;left:0;border-radius:3px}
+.sig-badge{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:100px;text-align:center;white-space:nowrap}
+.sig-badge.run{color:#14521A;background:#DCEEDD;border:1px solid #BFD9C0}
+.sig-badge.stop{color:#8F3A12;background:#FBEEE7;border:1px solid var(--rust-soft)}
+.tl-row .val{text-align:right;font-size:13.5px;font-weight:600}
+@media(max-width:640px){.tl-row{grid-template-columns:62px 1fr 74px;gap:8px;padding:10px 12px}.tl-row .val{display:none}}
+
+.feed-shell{display:grid;grid-template-columns:1.15fr .85fr;gap:26px;margin-top:34px;align-items:start}
+@media(max-width:900px){.feed-shell{grid-template-columns:1fr}}
+.feed{border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);max-height:540px;overflow-y:auto}
+.feed-bar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:2}
+.feed-bar .t{font-size:13px;font-weight:600;color:var(--ink-2)}
+.post{padding:15px 16px;border-bottom:1px solid var(--line-soft);animation:slidein .35s ease}
+.post:last-child{border-bottom:0}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.post-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);margin-bottom:6px;flex-wrap:wrap}
+.post-meta .who{font-weight:700;color:var(--ink)}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;border:1px solid var(--line)}
+.tag.run{color:#14521A;border-color:#BFD9C0;background:#DCEEDD}
+.tag.stop{color:var(--rust);border-color:var(--rust-soft);background:#FBEEE7}
+.tag.info{color:var(--sky);border-color:#BDD2E0;background:#EDF3F8}
+.post .body{font-size:15px;line-height:1.5}
+.post .alt{margin-top:7px;font-size:14.5px;color:var(--green-d)}
+.post .data{margin-top:9px;font-size:12.5px;color:var(--ink-3);display:flex;gap:14px;flex-wrap:wrap}
+
+.builder{border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);padding:20px}
+.builder h3{font-size:17px;font-weight:700}
+.builder .hint{font-size:13.5px;color:var(--ink-3);margin-top:5px}
+.field{margin-top:18px}
+.field .lbl{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:7px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border:1px solid var(--line);background:var(--panel);border-radius:100px;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--green-d);border-color:var(--green-d);color:#F2F8EE}
+.preview{margin-top:20px;border:1px dashed var(--line);border-radius:var(--r);padding:14px;background:var(--panel);font-size:14px;line-height:1.5}
+.preview .ttl{font-size:12px;color:var(--ink-3);font-weight:600;margin-bottom:7px}
+
+/* future POV */
+.future{background:linear-gradient(180deg,#EDF3F8,var(--panel-hi));border:1px solid #BDD2E0;border-radius:6px;padding:28px;margin-top:32px}
+.future .flag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--sky);border:1px solid #BDD2E0;background:#E3EDF5;padding:3px 10px;border-radius:100px}
+.future h3{margin-top:14px;font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.02em;max-width:24ch}
+.future p{margin-top:12px;font-size:15.5px;color:var(--ink-2);max-width:66ch}
+.contrast{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:24px;background:#BDD2E0;border:1px solid #BDD2E0;border-radius:6px;overflow:hidden}
+.contrast>div{background:var(--panel-hi);padding:20px}
+.contrast h4{font-size:15.5px;font-weight:700}
+.contrast ul{margin-top:10px;padding-left:17px;font-size:14px;color:var(--ink-2)}
+.contrast li{margin-top:6px}
+@media(max-width:700px){.contrast{grid-template-columns:1fr}}
+
+.tok-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;margin-top:36px;align-items:start}
+@media(max-width:900px){.tok-grid{grid-template-columns:1fr}}
+table.util{width:100%;border-collapse:collapse;border:1px solid var(--line);background:var(--panel-hi);border-radius:6px;overflow:hidden}
+table.util th{text-align:left;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:11px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+table.util td{padding:14px;border-bottom:1px solid var(--line-soft);font-size:14.5px;vertical-align:top}
+table.util tr:last-child td{border-bottom:0}
+table.util td:first-child{font-weight:700;width:34%}
+table.util td small{display:block;color:var(--ink-3);font-size:12.5px;font-weight:400;margin-top:3px}
+
+.alloc{border:1px solid var(--line);border-radius:6px;background:var(--panel-hi);padding:20px}
+.alloc h3{font-size:16px;font-weight:700}
+.abar{display:flex;height:34px;border-radius:3px;overflow:hidden;margin-top:16px;border:1px solid var(--line)}
+.abar div{cursor:pointer}
+.abar div.on{filter:brightness(1.15)}
+.alist{margin-top:14px}
+.aitem{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13.5px;padding:7px 8px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;width:100%;background:none;font-family:inherit;text-align:left}
+.aitem:hover,.aitem.on{background:var(--panel);border-color:var(--line-soft)}
+.aitem i{width:11px;height:11px;border-radius:2px;flex:none}
+.aitem b{margin-left:auto;font-family:var(--mono);font-size:13px}
+.aitem .note{display:none;font-size:12.5px;color:var(--ink-3);flex-basis:100%;padding-left:21px;line-height:1.45}
+.aitem.on .note{display:block}
+
+.burn{margin-top:22px;border:1px solid var(--line);border-radius:6px;background:linear-gradient(180deg,#FBEEE7,var(--panel-hi));padding:20px}
+.burn .name{font-size:17px;font-weight:700}
+.burn .de-sub{font-size:14px;color:var(--green-d);margin-top:3px}
+.clock{display:flex;gap:8px;margin-top:16px}
+.clock div{flex:1;background:var(--panel-hi);border:1px solid var(--line);border-radius:var(--r);padding:10px 6px;text-align:center}
+.clock .n{font-family:var(--mono);font-size:clamp(18px,3vw,24px);font-weight:600;color:var(--rust)}
+.clock .u{font-size:11px;color:var(--ink-3);margin-top:2px}
+.burn p{font-size:13.5px;color:var(--ink-2);margin-top:14px}
+
+.road{margin-top:36px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.road>div{background:var(--panel-hi);padding:22px 20px}
+.road .step{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
+.road h4{margin-top:10px;font-size:16.5px;font-weight:700}
+.road p{margin-top:8px;font-size:14px;color:var(--ink-2)}
+.road .now{display:inline-block;margin-top:12px;font-size:11.5px;font-weight:700;color:var(--green-d);border:1px solid #BFD9C0;background:#EDF6ED;padding:2px 8px;border-radius:100px}
+@media(max-width:900px){.road{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.road{grid-template-columns:1fr}}
+
+footer{border-top:1px solid var(--line);padding:44px 0 60px;background:var(--panel)}
+.foot-note{border:1px solid var(--rust-soft);background:#FBEEE7;border-radius:6px;padding:16px 18px;font-size:14px;line-height:1.6;color:#6B3418;max-width:76ch}
+.foot-note b{color:var(--rust)}
+.foot-bottom{display:flex;flex-wrap:wrap;gap:16px;align-items:baseline;margin-top:26px;font-size:13.5px;color:var(--ink-3)}
+.foot-bottom .de{color:var(--green-d);margin-left:auto}
+@media(max-width:640px){.foot-bottom .de{margin-left:0;flex-basis:100%}}
+.tipbox{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel-hi);padding:8px 10px;border-radius:var(--r);font-size:12px;line-height:1.45;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:20}
+.tipbox b{font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top"><span class="mk"></span>ÜBERWATT</a>
+    <nav class="navlinks">
+      <a href="#problem" data-i="nav1">The problem</a>
+      <a href="#schedule" data-i="nav2">Today's schedule</a>
+      <a href="#feed" data-i="nav3">Agent feed</a>
+      <a href="#future" data-i="nav4">Looking ahead</a>
+      <a href="#token" data-i="nav5">$WATT</a>
+    </nav>
+    <div class="langsel" role="group" aria-label="Language">
+      <button data-l="en" aria-pressed="true">EN</button>
+      <button data-l="de" aria-pressed="false">DE</button>
+      <button data-l="zh" aria-pressed="false">中文</button>
+    </div>
+    <span class="demo-flag" data-i="demo">Demo — simulated data</span>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap hero">
+  <h1 data-i="h1">Run when power is free. Stop when the grid pays you more to shut down.</h1>
+  <p class="lede" data-i="lede">Every afternoon, grids throw away solar and wind they cannot use, and wholesale prices fall below zero. Hours later the same grid pays hundreds per megawatt-hour. If your load can move, that gap is your margin. ÜberWatt watches five grids and tells you which side of your breakeven you are on, minute by minute.</p>
+  <p class="sig de" data-i="sig">Der Duck ist tot. Die Kurve muss überwunden werden.</p>
+  <div class="who-for">
+    <span data-i="w1">Bitcoin mining farms</span>
+    <span data-i="w2">AI training clusters</span>
+    <span data-i="w3">Grid-scale batteries</span>
+    <span data-i="w4">EV charging fleets</span>
+  </div>
+
+  <div class="console">
+    <div class="console-top">
+      <div class="tabs" role="tablist" aria-label="Grid">
+        <button class="tab" role="tab" aria-selected="true" data-r="ercot">ERCOT · Texas</button>
+        <button class="tab" role="tab" aria-selected="false" data-r="caiso">CAISO · California</button>
+        <button class="tab" role="tab" aria-selected="false" data-r="cnnw">中国西北 · Northwest China</button>
+        <button class="tab" role="tab" aria-selected="false" data-r="entsoe">ENTSO-E · Germany</button>
+        <button class="tab" role="tab" aria-selected="false" data-r="aemo">AEMO · South Australia</button>
+      </div>
+      <div class="status-pill" id="pill"><span class="dot"></span><span id="pillText">—</span></div>
+    </div>
+
+    <div class="viewrow">
+      <div class="seg" role="group" aria-label="Chart view">
+        <button id="vPrice" aria-pressed="true" data-i="vPrice">Price</button>
+        <button id="vLoad" aria-pressed="false" data-i="vLoad">Grid load</button>
+      </div>
+      <span style="font-size:12.5px;color:var(--ink-3)" data-i="scrubHint">Drag across the chart to move through the day</span>
+    </div>
+
+    <div class="chart-area">
+      <svg class="curve" id="curve" viewBox="0 0 1000 360" role="img" aria-label="Wholesale price across the day against your breakeven cost"></svg>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <div class="calc">
+      <div class="calc-head" data-i="calcHead">Your numbers</div>
+      <div class="calc-hint" data-i="calcHint">Enter what power costs you all-in and how much load you can move. Everything above updates.</div>
+      <div class="sliders">
+        <div class="sl">
+          <label for="be"><span data-i="beL">Your breakeven power cost</span><b class="num" id="beV">$45</b></label>
+          <input type="range" id="be" min="8" max="140" step="1" value="45">
+        </div>
+        <div class="sl">
+          <label for="mw"><span data-i="mwL">Flexible load you control</span><b class="num" id="mwV">50 MW</b></label>
+          <input type="range" id="mw" min="1" max="400" step="1" value="50">
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <div class="cell"><div class="k" data-i="r1">Right now</div><div class="v num" id="mNow">—</div><div class="s" id="mNowS">—</div></div>
+      <div class="cell"><div class="k" data-i="r2">Hours to run today</div><div class="v num good" id="mRun">—</div><div class="s" id="mRunS">—</div></div>
+      <div class="cell"><div class="k" data-i="r3">Hours to shut down</div><div class="v num hot" id="mStop">—</div><div class="s" id="mStopS">—</div></div>
+      <div class="cell"><div class="k" data-i="r4">Daily edge vs running 24/7</div><div class="v num good" id="mEdge">—</div><div class="s" id="mEdgeS">—</div></div>
+    </div>
+    <div class="tipbox" id="tip"></div>
+  </div>
+</div>
+
+<section id="problem">
+  <div class="wrap">
+    <h2 data-i="p2h">The cheapest power on earth shows up for ninety minutes and nobody is watching.</h2>
+    <p class="sub" data-i="p2s">Grid operators publish this data. It arrives as raw feeds built for traders, refreshed every five minutes, with nobody watching on your behalf. Flexible loads are the only buyers who can react in seconds — and most of them find out after the window has closed.</p>
+    <div class="strip">
+      <div><div class="big num" id="s1">0</div><p data-i="s1p">Gigawatt-hours of wind and solar curtailed across the five tracked grids this year, in this simulation.</p></div>
+      <div><div class="big num" id="s2">0</div><p data-i="s2p">Hours of negative wholesale pricing — the grid paying you to consume power.</p></div>
+      <div><div class="big num" id="s3">0</div><p data-i="s3p">Median warning before a window opens. No human monitoring desk moves that fast.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="schedule">
+  <div class="wrap">
+    <h2 data-i="p3h">Today's schedule</h2>
+    <p class="sub" data-i="p3s">Each row is a half-hour block, scored against the breakeven you set above. Green means the power is cheaper than your cost. Rust means you earn more by powering down than by running.</p>
+    <div class="tl">
+      <div class="tl-head" id="tlHead">—</div>
+      <div id="tlBody"></div>
+    </div>
+  </div>
+</section>
+
+<section id="feed">
+  <div class="wrap">
+    <h2 data-i="p4h">What the agent sends you</h2>
+    <p class="sub" data-i="p4s">ÜberWatt posts when the signal flips, not on a schedule. Every message carries the number that justifies the decision.</p>
+    <div class="feed-shell">
+      <div class="feed">
+        <div class="feed-bar"><span class="t" data-i="live">Live feed</span></div>
+        <div id="feedList"></div>
+      </div>
+      <div class="builder" id="how">
+        <h3 data-i="bh">Build your alert</h3>
+        <p class="hint" data-i="bhint">Pick what should wake you up. The preview updates as you choose.</p>
+        <div class="field"><span class="lbl" data-i="fGrid">Grid</span><div class="chips" id="bGrid">
+          <button class="chip" aria-pressed="true" data-v="ERCOT">ERCOT</button>
+          <button class="chip" aria-pressed="false" data-v="CAISO">CAISO</button>
+          <button class="chip" aria-pressed="false" data-v="中国西北">中国西北</button>
+          <button class="chip" aria-pressed="false" data-v="ENTSO-E">ENTSO-E</button>
+        </div></div>
+        <div class="field"><span class="lbl" data-i="fTrig">Trigger</span><div class="chips" id="bTrig">
+          <button class="chip" aria-pressed="true" data-v="below" data-i="t1">Price drops below my breakeven</button>
+          <button class="chip" aria-pressed="false" data-v="negative" data-i="t2">Price goes negative</button>
+          <button class="chip" aria-pressed="false" data-v="spike" data-i="t3">Peak spike — time to power down</button>
+        </div></div>
+        <div class="field"><span class="lbl" data-i="fChan">Send it to</span><div class="chips" id="bChan">
+          <button class="chip" aria-pressed="true" data-v="Webhook">Webhook</button>
+          <button class="chip" aria-pressed="false" data-v="Telegram">Telegram</button>
+          <button class="chip" aria-pressed="false" data-v="PagerDuty">PagerDuty</button>
+        </div></div>
+        <div class="preview"><div class="ttl" data-i="prev">Preview</div><div id="bPreview"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="future">
+  <div class="wrap">
+    <h2 data-i="p5h">Looking ahead</h2>
+    <p class="sub" data-i="p5s">This part is a bet on where flexible load goes next, not a product available today. We label it that way on purpose.</p>
+    <div class="future">
+      <span class="flag" data-i="flag">Future outlook — not a current market</span>
+      <h3 data-i="fh">Quantum engineering inverts the problem, and that makes it interesting.</h3>
+      <p data-i="fp1">A mining rig can stop in seconds and lose nothing. A quantum system cannot. Dilution refrigerators take days to reach operating temperature, and a power interruption destroys the run. Today these facilities draw tens of kilowatts, not megawatts — small enough to ignore. If error-corrected machines scale, that changes.</p>
+      <p data-i="fp2">The signal they need is the opposite of a miner's. Not "when does the window open" but "where is the surplus permanent." That is a siting question, and it is answered with the same data — read across years instead of minutes.</p>
+      <div class="contrast">
+        <div>
+          <h4 data-i="c1h">Miners and AI clusters — today</h4>
+          <ul>
+            <li data-i="c1a">Stop and start in seconds</li>
+            <li data-i="c1b">Want the next ninety minutes</li>
+            <li data-i="c1c">Profit from volatility</li>
+            <li data-i="c1d">Already the largest flexible load on ERCOT</li>
+          </ul>
+        </div>
+        <div>
+          <h4 data-i="c2h">Quantum facilities — the bet</h4>
+          <ul>
+            <li data-i="c2a">Cannot be power-cycled at all</li>
+            <li data-i="c2b">Want the next ten years</li>
+            <li data-i="c2c">Pay a premium for stability</li>
+            <li data-i="c2d">Would site where surplus is chronic, not occasional</li>
+          </ul>
+        </div>
+      </div>
+      <p data-i="fp3">Same archive, different question. That is the reason the historical record is worth building now, before anyone needs it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="token">
+  <div class="wrap">
+    <h2>$WATT</h2>
+    <p class="sub" data-i="p6s">The agent runs whether or not you hold anything — the public feed stays public. The token pays for what costs money to run, and decides which grid gets watched next.</p>
+    <div class="tok-grid">
+      <table class="util">
+        <thead><tr><th data-i="th1">What it does</th><th data-i="th2">How it works</th></tr></thead>
+        <tbody>
+          <tr><td data-i="u1a">Real-time signals</td><td data-i="u1b">Public posts run a few minutes behind. Holders above the threshold get the flip the moment it is detected, on the channel they choose.<small data-i="u1c">Most windows last under ninety minutes, so the delay is the whole product.</small></td></tr>
+          <tr><td data-i="u2a">Choose the next grid</td><td data-i="u2b">Stake to vote on which operator gets integrated next. Each one costs engineering time; the vote decides where it goes.<small data-i="u2c">Queued: PJM, Iberian market, Nordic pool, additional China regional grids.</small></td></tr>
+          <tr><td data-i="u3a">Historical archive</td><td data-i="u3b">Machine access to every detected window with timestamps and source references — for backtesting a load strategy, and for the siting question above.</td></tr>
+          <tr><td data-i="u4a">Correct the record</td><td data-i="u4b">Submit a missed window with a source. Verified corrections raise your reputation and earn from the contributor pool; false ones burn part of your stake.<small data-i="u4c">Reputation is not transferable, so it cannot be bought.</small></td></tr>
+        </tbody>
+      </table>
+      <div>
+        <div class="alloc"><h3 data-i="allocH">Supply allocation</h3><div class="abar" id="abar"></div><div class="alist" id="alist"></div></div>
+        <div class="burn">
+          <div class="name">Ewige Wiederkehr</div>
+          <div class="de-sub de" data-i="burnSub">The eternal return — weekly burn</div>
+          <div class="clock">
+            <div><div class="n" id="bd">0</div><div class="u" data-i="ud">days</div></div>
+            <div><div class="n" id="bh">0</div><div class="u" data-i="uh">hours</div></div>
+            <div><div class="n" id="bm">0</div><div class="u" data-i="um">min</div></div>
+            <div><div class="n" id="bs">0</div><div class="u" data-i="us">sec</div></div>
+          </div>
+          <p data-i="burnP">Every Sunday at 00:00 UTC, archive revenue from the past week buys $WATT on the open market and burns it. The amount is published with the transaction hash — same cycle, every week, checkable.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="wrap">
+    <h2 data-i="rmH">Roadmap</h2>
+    <p class="sub" data-i="rmS">Built in order, because each step depends on the one before it. Nothing is claimed finished until it is live and checkable.</p>
+    <div class="road">
+      <div><div class="step num" data-i="st1">Step 1</div><h4 data-i="r1h">Watch ERCOT properly</h4><p data-i="r1p">One grid, done well. Public feed posting every run/stop flip with the price and the source reference attached.</p><span class="now" data-i="inprog">In progress</span></div>
+      <div><div class="step num" data-i="st2">Step 2</div><h4 data-i="r2h">Live dashboard</h4><p data-i="r2p">This page running on operator data instead of simulated data, with a public archive of every past window.</p></div>
+      <div><div class="step num" data-i="st3">Step 3</div><h4 data-i="r3h">Webhooks and staking</h4><p data-i="r3p">Machine-readable signals your fleet controller can act on, and staking to vote on the next grid.</p></div>
+      <div><div class="step num" data-i="st4">Step 4</div><h4 data-i="r4h">Open the archive</h4><p data-i="r4p">Public API, community corrections with reputation scoring, and the multi-year record the siting question needs.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-note"><b data-i="warnB">Read this before you do anything.</b> <span data-i="warnT">This page is a design mockup. Every number on it is generated in your browser to demonstrate the interface — it is not live grid data, and no token exists yet. Nothing here is financial advice, and staking or reward mechanics may be regulated where you live. Check that yourself before launching or buying anything.</span></div>
+    <div class="foot-bottom">
+      <span data-i="ftag">ÜberWatt — for loads that can choose when to work.</span>
+      <span data-i="fsrc">Sources when live: ERCOT MIS · CAISO OASIS · ENTSO-E Transparency · AEMO NEM · China regional grid disclosures</span>
+      <span class="de" data-i="fde">Werde, der du bist.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ═══ i18n ═══ */
+const T={
+ en:{},
+ de:{
+  nav1:'Das Problem',nav2:'Heutiger Fahrplan',nav3:'Agenten-Feed',nav4:'Ausblick',nav5:'$WATT',
+  demo:'Demo — simulierte Daten',
+  h1:'Laufen, wenn der Strom nichts kostet. Abschalten, wenn das Netz mehr dafür zahlt.',
+  lede:'Jeden Nachmittag wirft das Netz Solar- und Windstrom weg, den es nicht braucht, und die Börsenpreise fallen unter null. Stunden später zahlt dasselbe Netz Hunderte pro Megawattstunde. Wenn deine Last verschiebbar ist, ist diese Lücke deine Marge. ÜberWatt beobachtet fünf Netze und sagt dir minütlich, auf welcher Seite deiner Gewinnschwelle du stehst.',
+  sig:'Der Duck ist tot. Die Kurve muss überwunden werden.',
+  w1:'Bitcoin-Mining-Farmen',w2:'KI-Rechencluster',w3:'Netzspeicher',w4:'E-Auto-Ladeflotten',
+  vPrice:'Preis',vLoad:'Netzlast',scrubHint:'Über das Diagramm ziehen, um durch den Tag zu gehen',
+  calcHead:'Deine Zahlen',calcHint:'Trage ein, was dich Strom insgesamt kostet und wie viel Last du verschieben kannst. Alles oben aktualisiert sich.',
+  beL:'Deine Gewinnschwelle beim Strompreis',mwL:'Verschiebbare Last',
+  r1:'Gerade jetzt',r2:'Laufstunden heute',r3:'Abschaltstunden',r4:'Tagesvorteil gegenüber Dauerbetrieb',
+  p2h:'Der billigste Strom der Welt erscheint für neunzig Minuten — und niemand schaut hin.',
+  p2s:'Die Netzbetreiber veröffentlichen diese Daten. Sie kommen als Rohdaten für Händler, alle fünf Minuten erneuert, und niemand beobachtet sie für dich. Verschiebbare Lasten sind die einzigen Abnehmer, die in Sekunden reagieren können — und die meisten erfahren es erst, wenn das Fenster zu ist.',
+  s1p:'Gigawattstunden Wind und Sonne, die in dieser Simulation über die fünf Netze hinweg abgeregelt wurden.',
+  s2p:'Stunden mit negativen Börsenpreisen — das Netz zahlt dir dafür, Strom zu verbrauchen.',
+  s3p:'Mittlere Vorwarnzeit, bevor ein Fenster aufgeht. Kein menschlicher Leitstand ist so schnell.',
+  p3h:'Heutiger Fahrplan',
+  p3s:'Jede Zeile ist ein halbstündiger Block, gemessen an der Gewinnschwelle oben. Grün heißt: der Strom ist billiger als deine Kosten. Rost heißt: Abschalten bringt mehr als Laufen.',
+  p4h:'Was der Agent dir schickt',p4s:'ÜberWatt meldet sich, wenn das Signal umschlägt, nicht nach Zeitplan. Jede Nachricht trägt die Zahl, die die Entscheidung begründet.',
+  live:'Live-Feed',bh:'Alarm einrichten',bhint:'Wähle, wofür du geweckt werden willst. Die Vorschau aktualisiert sich.',
+  fGrid:'Netz',fTrig:'Auslöser',fChan:'Senden an',prev:'Vorschau',
+  t1:'Preis fällt unter meine Gewinnschwelle',t2:'Preis wird negativ',t3:'Preisspitze — Zeit abzuschalten',
+  p5h:'Ausblick',p5s:'Dieser Teil ist eine Wette darauf, wohin verschiebbare Last als Nächstes geht — kein Produkt, das es heute gibt. Wir kennzeichnen das bewusst.',
+  flag:'Zukunftsausblick — kein heutiger Markt',
+  fh:'Quantentechnik dreht das Problem um, und genau das macht sie interessant.',
+  fp1:'Ein Mining-Rig hält in Sekunden an und verliert nichts. Ein Quantensystem nicht. Mischkryostate brauchen Tage bis zur Betriebstemperatur, und ein Stromausfall zerstört den Lauf. Heute ziehen solche Anlagen zehner Kilowatt, nicht Megawatt — klein genug, um sie zu ignorieren. Wenn fehlerkorrigierte Maschinen skalieren, ändert sich das.',
+  fp2:'Das Signal, das sie brauchen, ist das Gegenteil des Miner-Signals. Nicht „wann geht das Fenster auf", sondern „wo ist der Überschuss dauerhaft". Das ist eine Standortfrage, beantwortet mit denselben Daten — über Jahre gelesen statt über Minuten.',
+  fp3:'Dasselbe Archiv, eine andere Frage. Deshalb lohnt es sich, den historischen Datensatz jetzt aufzubauen, bevor ihn jemand braucht.',
+  c1h:'Miner und KI-Cluster — heute',c1a:'Starten und stoppen in Sekunden',c1b:'Wollen die nächsten neunzig Minuten',c1c:'Profitieren von Volatilität',c1d:'Bereits die größte verschiebbare Last im ERCOT-Netz',
+  c2h:'Quantenanlagen — die Wette',c2a:'Lassen sich gar nicht abschalten',c2b:'Wollen die nächsten zehn Jahre',c2c:'Zahlen einen Aufpreis für Stabilität',c2d:'Würden dort bauen, wo Überschuss dauerhaft ist',
+  p6s:'Der Agent läuft, egal ob du etwas hältst — der öffentliche Feed bleibt öffentlich. Der Token bezahlt, was im Betrieb Geld kostet, und entscheidet, welches Netz als Nächstes beobachtet wird.',
+  th1:'Was er kann',th2:'Wie es funktioniert',
+  u1a:'Echtzeit-Signale',u1b:'Öffentliche Beiträge laufen einige Minuten hinterher. Halter über der Schwelle bekommen den Umschlag sofort, auf dem Kanal ihrer Wahl.',u1c:'Die meisten Fenster dauern unter neunzig Minuten — die Verzögerung ist das ganze Produkt.',
+  u2a:'Das nächste Netz wählen',u2b:'Stake, um abzustimmen, welcher Betreiber als Nächstes integriert wird. Jeder kostet Entwicklungszeit; die Abstimmung entscheidet.',u2c:'In der Warteschlange: PJM, iberischer Markt, nordischer Pool, weitere chinesische Regionalnetze.',
+  u3a:'Historisches Archiv',u3b:'Maschineller Zugriff auf jedes erkannte Fenster mit Zeitstempel und Quellenangabe — für Backtests und für die Standortfrage oben.',
+  u4a:'Den Datensatz korrigieren',u4b:'Ein übersehenes Fenster mit Quelle einreichen. Bestätigte Korrekturen erhöhen deine Reputation und werden aus dem Beitragspool vergütet; falsche verbrennen einen Teil deines Stakes.',u4c:'Reputation ist nicht übertragbar und daher nicht käuflich.',
+  allocH:'Verteilung des Angebots',burnSub:'Die ewige Wiederkehr — wöchentlicher Burn',
+  ud:'Tage',uh:'Std',um:'Min',us:'Sek',
+  burnP:'Jeden Sonntag um 00:00 UTC kauft der Archiverlös der Vorwoche $WATT am Markt und verbrennt ihn. Der Betrag wird mit der Transaktions-Hash veröffentlicht — derselbe Zyklus, jede Woche, überprüfbar.',
+  rmH:'Fahrplan',rmS:'Der Reihe nach gebaut, weil jeder Schritt auf dem vorherigen aufbaut. Nichts gilt als fertig, bevor es live und überprüfbar ist.',
+  st1:'Schritt 1',st2:'Schritt 2',st3:'Schritt 3',st4:'Schritt 4',inprog:'In Arbeit',
+  r1h:'ERCOT richtig beobachten',r1p:'Ein Netz, gut gemacht. Öffentlicher Feed für jeden Umschlag mit Preis und Quellenangabe.',
+  r2h:'Live-Dashboard',r2p:'Diese Seite auf echten Betreiberdaten statt Simulation, mit öffentlichem Archiv aller vergangenen Fenster.',
+  r3h:'Webhooks und Staking',r3p:'Maschinenlesbare Signale für deine Anlagensteuerung, plus Staking zur Abstimmung über das nächste Netz.',
+  r4h:'Das Archiv öffnen',r4p:'Öffentliche API, Community-Korrekturen mit Reputation, und der Mehrjahresdatensatz für die Standortfrage.',
+  warnB:'Bitte zuerst lesen.',
+  warnT:'Diese Seite ist ein Entwurf. Alle Zahlen werden im Browser erzeugt, um die Oberfläche zu zeigen — es sind keine echten Netzdaten, und einen Token gibt es noch nicht. Nichts hier ist Finanzberatung, und Staking- oder Belohnungsmechaniken können bei dir reguliert sein. Prüfe das selbst, bevor du etwas startest oder kaufst.',
+  ftag:'ÜberWatt — für Lasten, die wählen können, wann sie arbeiten.',
+  fsrc:'Quellen im Livebetrieb: ERCOT MIS · CAISO OASIS · ENTSO-E Transparency · AEMO NEM · chinesische Regionalnetz-Veröffentlichungen',
+  fde:'Werde, der du bist.'
+ },
+ zh:{
+  nav1:'问题',nav2:'今日运行表',nav3:'智能体动态',nav4:'未来展望',nav5:'$WATT',
+  demo:'演示 — 模拟数据',
+  h1:'电价为零时开机，电网出价更高时停机。',
+  lede:'每天下午，电网都会弃掉用不完的风电和光伏，批发电价跌至零以下。几小时后，同一张电网又要为每兆瓦时支付数百元。如果你的负荷可以移动，这个价差就是你的利润。ÜberWatt 监测五张电网，逐分钟告诉你此刻处在盈亏平衡点的哪一侧。',
+  sig:'鸭子曲线已死。这条曲线必须被超越。',
+  w1:'比特币矿场',w2:'AI 训练集群',w3:'电网级储能',w4:'电动车充电车队',
+  vPrice:'电价',vLoad:'电网负荷',scrubHint:'在图上拖动以查看全天',
+  calcHead:'你的数字',calcHint:'填入你的综合电力成本和可调度负荷规模，上方所有数据都会更新。',
+  beL:'你的电力盈亏平衡成本',mwL:'你可调度的负荷',
+  r1:'此刻',r2:'今日应开机时长',r3:'今日应停机时长',r4:'相比 24 小时满负荷的日收益差',
+  p2h:'全球最便宜的电力只出现九十分钟，却没人盯着。',
+  p2s:'电网调度机构会公开这些数据，但它们以面向交易员的原始数据流发布，每五分钟刷新一次，没有人替你盯着。可调度负荷是唯一能在几秒内响应的买家——而大多数人都是在窗口关闭之后才知道。',
+  s1p:'本模拟中，五张电网今年被弃掉的风电与光伏电量（吉瓦时）。',
+  s2p:'负电价小时数——电网付钱让你用电。',
+  s3p:'窗口开启前的中位提前量。没有任何人工监控台能这么快。',
+  p3h:'今日运行表',
+  p3s:'每一行代表半小时，按你在上方设定的盈亏平衡点评分。绿色表示电价低于你的成本；锈色表示停机比开机更划算。',
+  p4h:'智能体会发给你什么',p4s:'ÜberWatt 只在信号翻转时推送，不按固定时间发。每条消息都附带支撑该决策的数字。',
+  live:'实时动态',bh:'配置你的提醒',bhint:'选择什么情况需要叫醒你，预览会实时更新。',
+  fGrid:'电网',fTrig:'触发条件',fChan:'发送至',prev:'预览',
+  t1:'电价跌破我的盈亏平衡点',t2:'电价转为负值',t3:'尖峰电价——该停机了',
+  p5h:'未来展望',p5s:'这一部分是对可调度负荷未来走向的判断，不是今天已有的产品。我们特意这样标注。',
+  flag:'未来展望 — 并非当前市场',
+  fh:'量子工程把这个问题反了过来，这正是它有意思的地方。',
+  fp1:'矿机可以在几秒内停机且毫无损失，量子系统不行。稀释制冷机需要数天才能降到工作温度，一次断电就毁掉整轮运算。今天这类设施的功率是几十千瓦而非兆瓦级，小到可以忽略。但如果纠错量子计算机实现规模化，情况就会改变。',
+  fp2:'它们需要的信号与矿场恰好相反：不是"窗口什么时候打开"，而是"哪里的电力过剩是长期的"。这是一个选址问题，用的是同一批数据——只不过以年为尺度阅读，而不是以分钟。',
+  fp3:'同一个数据库，不同的问题。这就是为什么值得现在就把历史记录建起来，趁还没有人需要它。',
+  c1h:'矿场与 AI 集群 — 当下',c1a:'可在数秒内启停',c1b:'关心接下来的九十分钟',c1c:'从波动中获利',c1d:'已是 ERCOT 电网上最大的可调度负荷',
+  c2h:'量子设施 — 这个赌注',c2a:'根本无法断电重启',c2b:'关心接下来的十年',c2c:'愿为稳定性支付溢价',c2d:'会选在电力长期过剩的地方建设',
+  p6s:'无论你是否持币，智能体都照常运行——公开动态始终公开。代币支付的是真正花钱的部分，并决定下一张要接入的电网。',
+  th1:'能做什么',th2:'如何运作',
+  u1a:'实时信号',u1b:'公开推送会延迟几分钟。达到持仓门槛的用户在信号翻转的瞬间就收到通知，渠道自选。',u1c:'多数窗口不足九十分钟，这段延迟本身就是产品的全部价值。',
+  u2a:'投票决定下一张电网',u2b:'质押投票决定下一个接入的调度机构。每接入一张电网都要投入工程时间，票数决定方向。',u2c:'排队中：PJM、伊比利亚市场、北欧电力池、中国其他区域电网。',
+  u3a:'历史数据库',u3b:'以机器可读方式访问每一次已识别的窗口，含时间戳与数据来源——用于回测负荷策略，也用于上面提到的选址问题。',
+  u4a:'修正记录',u4b:'提交被遗漏的窗口并附上来源。经核实的修正会提升你的信誉分并从贡献池获得回报；虚假提交则销毁部分质押。',u4c:'信誉分不可转让，因此买不到。',
+  allocH:'代币分配',burnSub:'永恒回归 — 每周销毁',
+  ud:'天',uh:'时',um:'分',us:'秒',
+  burnP:'每周日 00:00 UTC，上一周的数据库收入将在公开市场买入 $WATT 并销毁。金额与交易哈希一同公布——同一个循环，每周一次，可核查。',
+  rmH:'路线图',rmS:'按顺序推进，因为每一步都依赖前一步。在真正上线并可核查之前，不会声称任何一项已完成。',
+  st1:'第一步',st2:'第二步',st3:'第三步',st4:'第四步',inprog:'进行中',
+  r1h:'先把 ERCOT 做扎实',r1p:'只做一张电网，但做好。公开推送每一次信号翻转，附电价与数据来源。',
+  r2h:'实时看板',r2p:'本页面改用真实调度数据而非模拟数据，并公开所有历史窗口存档。',
+  r3h:'Webhook 与质押',r3p:'机器可读信号，可直接接入你的机群控制系统；质押投票决定下一张电网。',
+  r4h:'开放数据库',r4p:'公开 API、带信誉评分的社区修正，以及选址问题所需的多年期数据记录。',
+  warnB:'动手之前请先读这段。',
+  warnT:'本页面是设计原型。页面上的所有数字都由你的浏览器生成，用于演示界面——它们不是真实电网数据，代币也尚不存在。此处内容不构成投资建议，质押与奖励机制在你所在地区可能受到监管。启动或购买任何东西之前，请自行核实。',
+  ftag:'ÜberWatt — 为那些能自己选择何时工作的负荷而建。',
+  fsrc:'正式上线后的数据来源：ERCOT MIS · CAISO OASIS · ENTSO-E Transparency · AEMO NEM · 中国区域电网公开披露',
+  fde:'成为你自己。'
+ }
+};
+let L='en';
+const EN={};
+document.querySelectorAll('[data-i]').forEach(e=>EN[e.dataset.i]=e.innerHTML);
+T.en=EN;
+function applyLang(l){
+  L=l;document.documentElement.lang=l;
+  document.querySelectorAll('[data-i]').forEach(e=>{
+    const v=T[l][e.dataset.i]; if(v!==undefined) e.innerHTML=v;
+  });
+  document.querySelectorAll('.langsel button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.l===l)));
+  draw();paint();schedule();renderFeed(true);preview();alloc();
+}
+
+/* ═══ regions ═══ */
+const R={
+ ercot:{name:'ERCOT · Texas',tz:'CT',ccy:'$',base:44000,am:4200,pm:15500,night:5200,solar:19000,wind:12000,floor:22000,cur:.55,pk:340},
+ caiso:{name:'CAISO · California',tz:'PT',ccy:'$',base:20500,am:3200,pm:9800,night:2600,solar:16500,wind:2600,floor:9000,cur:.34,pk:420},
+ cnnw:{name:'中国西北 · Northwest China',tz:'CST',ccy:'¥',base:78000,am:7000,pm:14000,night:8000,solar:36000,wind:34000,floor:42000,cur:.42,pk:520},
+ entsoe:{name:'ENTSO-E · Germany',tz:'CET',ccy:'€',base:52000,am:6500,pm:12000,night:7000,solar:31000,wind:16000,floor:24000,cur:.32,pk:260},
+ aemo:{name:'AEMO · South Australia',tz:'ACST',ccy:'A$',base:1250,am:190,pm:520,night:180,solar:1450,wind:900,floor:380,cur:.28,pk:480}
+};
+let cur='ercot',idx=26,view='price',BE=45,MW=50;
+
+function build(k){
+  const c=R[k],out=[];
+  for(let i=0;i<48;i++){
+    const h=i/2;
+    const demand=c.base+Math.exp(-Math.pow(h-7.8,2)/7)*c.am+Math.exp(-Math.pow(h-19.3,2)/8)*c.pm-Math.exp(-Math.pow(h-3.4,2)/16)*c.night;
+    const solar=(h>5.4&&h<19.2)?c.solar*Math.pow(Math.max(0,Math.cos((h-12.9)/6.9*Math.PI/2)),2.6):0;
+    const wind=c.wind*(.55+.45*Math.sin((h-4)/24*2*Math.PI));
+    const re=solar+wind, net=demand-re;
+    const curtail=Math.max(0,c.floor-net)*c.cur;
+    let price;
+    if(curtail>0) price=-(curtail/c.floor)*90-3;
+    else price=12+Math.pow(Math.max(0,net-c.floor)/(c.base*.9),3.2)*c.pk;
+    out.push({i,h,demand,solar,wind,re,net,curtail,price});
+  }
+  return out;
+}
+let D=build(cur);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const hhmm=i=>String(Math.floor(i/2)).padStart(2,'0')+':'+(i%2?'30':'00');
+const money=(v,c)=>(v<0?'−':'')+c+fmt(Math.abs(v));
+
+/* ═══ chart ═══ */
+const NS='http://www.w3.org/2000/svg';
+const W=1000;let H=360,PL=54,PR=16,PT=18,PB=30,SC=1;
+function metrics(){
+  const s=document.getElementById('curve');
+  const px=s.getBoundingClientRect().width||900;
+  H=px<560?620:px<820?450:360;
+  SC=W/px;
+  PL=Math.round(46*SC);PR=Math.round(12*SC);PT=Math.round(14*SC);PB=Math.round(26*SC);
+  s.setAttribute('viewBox',`0 0 ${W} ${H}`);
+}
+function draw(){
+  metrics();
+  const s=document.getElementById('curve');s.innerHTML='';
+  const c=R[cur];
+  const F=n=>+(n*SC).toFixed(1), K=n=>+(n*SC).toFixed(2);
+  const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const isPrice=view==='price';
+  const val=p=>isPrice?p.price:p.net;
+  const maxY=isPrice?Math.max(BE*1.4,...D.map(p=>p.price))*1.08:Math.max(...D.map(p=>p.demand))*1.1;
+  const minY=isPrice?Math.min(0,...D.map(p=>p.price))*1.2:0;
+  const X=i=>PL+(i/47)*(W-PL-PR);
+  const Y=v=>PT+(1-(v-minY)/(maxY-minY))*(H-PT-PB);
+
+  const step=Math.pow(10,Math.floor(Math.log10(Math.max(maxY,1))))/2;
+  for(let v=Math.ceil(minY/step)*step;v<=maxY;v+=step){
+    s.appendChild(el('line',{x1:PL,x2:W-PR,y1:Y(v),y2:Y(v),stroke:v===0?'#556A59':'#DCE8D2','stroke-width':v===0?K(1.2):K(1)}));
+    s.appendChild(Object.assign(el('text',{x:PL-K(7),y:Y(v)+F(3.6),'text-anchor':'end','font-size':F(10.5),fill:'#556A59','font-family':'JetBrains Mono, monospace'}),{textContent:Math.abs(v)>=1000?(v/1000)+'k':v}));
+  }
+  [0,12,24,36,47].forEach(i=>s.appendChild(Object.assign(el('text',{x:X(i),y:H-F(8),'text-anchor':i===0?'start':i===47?'end':'middle','font-size':F(10.5),fill:'#556A59','font-family':'JetBrains Mono, monospace'}),{textContent:hhmm(i)})));
+
+  if(isPrice){
+    // shade each block by which side of breakeven it sits on
+    D.forEach((p,i)=>{
+      const x0=X(Math.max(0,i-.5)),x1=X(Math.min(47,i+.5));
+      const run=p.price<BE;
+      s.appendChild(el('rect',{x:x0,y:PT,width:Math.max(0,x1-x0),height:H-PT-PB,
+        fill:run?'#7FB800':'#C4501C',opacity:run?.14:.08}));
+    });
+    // breakeven line
+    s.appendChild(el('line',{x1:PL,x2:W-PR,y1:Y(BE),y2:Y(BE),stroke:'#16241A','stroke-width':K(1.8),'stroke-dasharray':`${K(6)} ${K(4)}`}));
+    const beL={en:'breakeven ',de:'Gewinnschwelle ',zh:'盈亏平衡点 '}[L];
+    s.appendChild(Object.assign(el('text',{x:W-PR-K(4),y:Y(BE)-F(6),'text-anchor':'end','font-size':F(11.5),'font-weight':700,fill:'#16241A'}),{textContent:beL+c.ccy+BE}));
+    let d='';D.forEach((p,i)=>d+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.price).toFixed(1));
+    s.appendChild(el('path',{d,fill:'none',stroke:'#1B5E20','stroke-width':K(2.6),'stroke-linejoin':'round'}));
+  }else{
+    let ra='M'+X(0)+' '+Y(0);D.forEach((p,i)=>ra+='L'+X(i).toFixed(1)+' '+Y(p.re).toFixed(1));ra+='L'+X(47)+' '+Y(0)+'Z';
+    s.appendChild(el('path',{d:ra,fill:'#7FB800',opacity:.16}));
+    const seg=D.filter(p=>p.curtail>0);
+    if(seg.length){
+      let d='M'+X(seg[0].i)+' '+Y(c.floor);
+      seg.forEach(p=>d+='L'+X(p.i).toFixed(1)+' '+Y(c.floor).toFixed(1));
+      for(let j=seg.length-1;j>=0;j--)d+='L'+X(seg[j].i).toFixed(1)+' '+Y(seg[j].net).toFixed(1);
+      d+='Z';
+      s.appendChild(el('path',{d,fill:'#C4501C',opacity:.2}));
+      const mid=seg[Math.floor(seg.length/2)];
+      s.appendChild(Object.assign(el('text',{x:X(mid.i),y:Y((c.floor+mid.net)/2)+F(4),'text-anchor':'middle','font-size':F(12),'font-weight':700,fill:'#8F3A12'}),{textContent:L==='zh'?'被弃掉':L==='de'?'weggeworfen':'thrown away'}));
+    }
+    let dd='';D.forEach((p,i)=>dd+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.demand).toFixed(1));
+    s.appendChild(el('path',{d:dd,fill:'none',stroke:'#3E5142','stroke-width':K(1.6),opacity:.6}));
+    let nn='';D.forEach((p,i)=>nn+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.net).toFixed(1));
+    s.appendChild(el('path',{d:nn,fill:'none',stroke:'#1B5E20','stroke-width':K(2.8),'stroke-linejoin':'round'}));
+  }
+  const p=D[idx];
+  s.appendChild(el('line',{x1:X(idx),x2:X(idx),y1:PT,y2:H-PB,stroke:'#16241A','stroke-width':K(1),'stroke-dasharray':`${K(3)} ${K(3)}`,opacity:.6}));
+  s.appendChild(el('circle',{cx:X(idx),cy:Y(val(p)),r:K(5.5),fill:'#FBFDF8',stroke:'#16241A','stroke-width':K(2.4)}));
+
+  const lg={en:['Wholesale price','Your breakeven','Run — cheaper than your cost','Shut down — grid pays more'],
+            de:['Börsenpreis','Deine Gewinnschwelle','Laufen — billiger als deine Kosten','Abschalten — Netz zahlt mehr'],
+            zh:['批发电价','你的盈亏平衡点','开机 — 电价低于成本','停机 — 电网出价更高']}[L];
+  const lgL={en:['Total demand','Renewables available','Net load (the duck)','Curtailed'],
+             de:['Gesamtlast','Erneuerbare verfügbar','Netzlast (die Ente)','Abgeregelt'],
+             zh:['总用电需求','可用可再生能源','净负荷（鸭子曲线）','被弃电量']}[L];
+  const set=isPrice?[['#1B5E20',lg[0]],['#16241A',lg[1]],['#7FB800',lg[2]],['#C4501C',lg[3]]]
+                   :[['#3E5142',lgL[0]],['#7FB800',lgL[1]],['#1B5E20',lgL[2]],['#C4501C',lgL[3]]];
+  document.getElementById('legend').innerHTML=set.map(([c2,t])=>`<span><i style="background:${c2}"></i>${t}</span>`).join('');
+}
+
+/* ═══ economics ═══ */
+function econ(){
+  const c=R[cur];let runH=0,stopH=0,edge=0,cheapest=null;
+  D.forEach(p=>{
+    if(p.price<BE){runH+=.5;}
+    else{
+      stopH+=.5;
+      // running 24/7 would mean paying above your breakeven in these blocks;
+      // shutting down is what you actually save, so only these count as the edge
+      edge+=(p.price-BE)*MW*.5;
+    }
+    if(!cheapest||p.price<cheapest.price)cheapest=p;
+  });
+  return{runH,stopH,edge,cheapest,c};
+}
+function paint(){
+  const p=D[idx],{runH,stopH,edge,cheapest,c}=econ();
+  const run=p.price<BE;
+  const S={en:{run:'Run',stop:'Shut down',vs:'price '+money(p.price,c.ccy)+' vs '+c.ccy+BE,
+              hrs:'h',cheap:'cheapest at '+hhmm(cheapest.i),edge:'on '+MW+' MW of flexible load',
+              pillRun:'Run now — '+money(p.price,c.ccy)+'/MWh at '+hhmm(idx),
+              pillStop:'Shut down — '+money(p.price,c.ccy)+'/MWh at '+hhmm(idx)},
+         de:{run:'Laufen',stop:'Abschalten',vs:'Preis '+money(p.price,c.ccy)+' vs '+c.ccy+BE,
+              hrs:'Std',cheap:'am billigsten um '+hhmm(cheapest.i),edge:'bei '+MW+' MW verschiebbarer Last',
+              pillRun:'Jetzt laufen — '+money(p.price,c.ccy)+'/MWh um '+hhmm(idx),
+              pillStop:'Abschalten — '+money(p.price,c.ccy)+'/MWh um '+hhmm(idx)},
+         zh:{run:'开机',stop:'停机',vs:'电价 '+money(p.price,c.ccy)+' / 平衡点 '+c.ccy+BE,
+              hrs:'小时',cheap:hhmm(cheapest.i)+' 最便宜',edge:'按 '+MW+' MW 可调度负荷计算',
+              pillRun:hhmm(idx)+' 应开机 — '+money(p.price,c.ccy)+'/MWh',
+              pillStop:hhmm(idx)+' 应停机 — '+money(p.price,c.ccy)+'/MWh'}}[L];
+  const now=document.getElementById('mNow');
+  now.textContent=run?S.run:S.stop;now.className='v num '+(run?'good':'hot');
+  document.getElementById('mNowS').textContent=S.vs;
+  document.getElementById('mRun').textContent=runH+' '+S.hrs;
+  document.getElementById('mRunS').textContent=S.cheap;
+  document.getElementById('mStop').textContent=stopH+' '+S.hrs;
+  document.getElementById('mStopS').textContent={en:'peak ',de:'Spitze ',zh:'尖峰 '}[L]+money(Math.max(...D.map(x=>x.price)),c.ccy);
+  document.getElementById('mEdge').textContent=money(edge,c.ccy);
+  document.getElementById('mEdgeS').textContent=S.edge;
+  const pill=document.getElementById('pill');
+  pill.className='status-pill '+(run?'run':'stop');
+  document.getElementById('pillText').textContent=run?S.pillRun:S.pillStop;
+  document.getElementById('beV').textContent=c.ccy+BE;
+  document.getElementById('mwV').textContent=MW+' MW';
+  document.getElementById('tlHead').textContent=c.name+' — '+({en:'30-minute blocks, ',de:'30-Minuten-Blöcke, ',zh:'半小时区块，'}[L])+c.tz;
+}
+
+/* ═══ schedule ═══ */
+function schedule(){
+  const c=R[cur],box=document.getElementById('tlBody');
+  const lo=Math.min(...D.map(p=>p.price)),hi=Math.max(...D.map(p=>p.price));
+  const lbl={en:['Run','Stop'],de:['Laufen','Abschalten'],zh:['开机','停机']}[L];
+  box.innerHTML=D.filter(p=>p.i%2===0).map(p=>{
+    const run=p.price<BE;
+    const w=Math.max(3,((p.price-lo)/(hi-lo))*100);
+    const delta=(run?(BE-p.price):(p.price-BE))*MW*.5;
+    return `<div class="tl-row">
+      <div class="time num">${hhmm(p.i)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${run?'#8CC63F':'linear-gradient(90deg,#E07A45,#C4501C)'}"></div></div>
+      <div><span class="sig-badge ${run?'run':'stop'}">${run?lbl[0]:lbl[1]}</span></div>
+      <div class="val num" style="color:${run?'var(--green-d)':'var(--rust)'}">${money(delta,c.ccy)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ feed ═══ */
+const POSTS={
+ ercot:[
+  {k:'run',en:'HB_WEST at −$18/MWh. Below your breakeven by $63. Full send.',de:'HB_WEST bei −18 $/MWh. 63 $ unter deiner Gewinnschwelle. Volle Last.',zh:'HB_WEST 报 −18 美元/兆瓦时，比你的平衡点低 63 美元。满负荷运行。'},
+  {k:'stop',en:'Evening ramp. Price crossed $210. Every megawatt you shut down now is worth more than every megawatt you hash.',de:'Abendrampe. Preis über 210 $. Jedes Megawatt, das du abschaltest, ist mehr wert als jedes, das du rechnest.',zh:'晚高峰爬坡，电价突破 210 美元。此刻你停下的每一兆瓦，都比你算出的每一兆瓦更值钱。'},
+  {k:'info',en:'West Texas wind curtailing again. 4,100 MW switched off, transmission-constrained.',de:'Wieder Windabregelung in Westtexas. 4.100 MW abgeschaltet, Netzengpass.',zh:'西德州风电再次弃风，4,100 兆瓦被切除，受输电通道限制。'},
+  {k:'info',en:'The grid did not fail today. It did exactly what a system without will does: it took the easy path and threw the surplus away.',de:'Das Netz hat heute nicht versagt. Es tat, was ein System ohne Willen tut: den bequemen Weg — und warf den Überschuss weg.',zh:'今天电网并没有出故障。它只是做了一个没有意志的系统会做的事：走最省事的路，把过剩的电扔掉。'}
+ ],
+ caiso:[
+  {k:'run',en:'SP15 negative for the last hour. Central Valley solar is being curtailed and the price is paying you to take it.',de:'SP15 seit einer Stunde negativ. Solarstrom im Central Valley wird abgeregelt — der Preis zahlt dir dafür.',zh:'SP15 已连续一小时负电价。中央谷地光伏正在被弃，电价在付钱请你用电。'},
+  {k:'stop',en:'Sun is going down. Net load climbing 13 GW in three hours. Power down before the ramp catches you.',de:'Die Sonne geht unter. Netzlast steigt in drei Stunden um 13 GW. Abschalten, bevor die Rampe dich einholt.',zh:'太阳落山，净负荷将在三小时内攀升 13 吉瓦。在爬坡追上你之前停机。'},
+  {k:'info',en:'2,420 MW curtailed at midday. Not a shortage of energy — a shortage of will.',de:'Mittags 2.420 MW abgeregelt. Kein Mangel an Energie — ein Mangel an Willen.',zh:'午间弃电 2,420 兆瓦。这不是能源的匮乏，而是意志的匮乏。'}
+ ],
+ cnnw:[
+  {k:'run',en:'Gansu and Xinjiang are curtailing hard. Surplus wind and solar with nowhere to go — the cheapest hours of the day start now.',de:'Gansu und Xinjiang regeln stark ab. Überschüssiger Wind- und Solarstrom ohne Abnehmer — die billigsten Stunden des Tages beginnen jetzt.',zh:'甘肃与新疆正在大幅弃风弃光。过剩的风电光伏无处消纳——全天最便宜的时段从现在开始。'},
+  {k:'info',en:'Northwest China has a word for this: qifeng qiguang — abandoned wind, abandoned sun. The scale here dwarfs every other grid we watch.',de:'Nordwestchina hat ein Wort dafür: qifeng qiguang — verworfener Wind, verworfene Sonne. Die Größenordnung übertrifft jedes andere Netz.',zh:'中国西北有一个专门的说法：弃风弃光。这里的规模远超我们监测的任何其他电网。'},
+  {k:'stop',en:'Evening peak across the Northwest grid. Industrial tariffs climb. Shut down until the load falls back.',de:'Abendspitze im Nordwestnetz. Industrietarife steigen. Abschalten, bis die Last zurückgeht.',zh:'西北电网进入晚高峰，工业电价上行。停机直到负荷回落。'}
+ ],
+ entsoe:[
+  {k:'run',en:'Day-ahead cleared negative for six straight hours. Northern wind has nowhere to go south.',de:'Day-Ahead sechs Stunden in Folge negativ. Der Windstrom aus dem Norden kommt nicht nach Süden.',zh:'日前市场连续六小时负电价。北部风电无法南送。'},
+  {k:'stop',en:'Redispatch ending, prices normalising. Your margin closes in twenty minutes.',de:'Redispatch endet, Preise normalisieren sich. Deine Marge schließt in zwanzig Minuten.',zh:'再调度结束，电价回归正常。你的利润窗口将在二十分钟后关闭。'},
+  {k:'info',en:'The bottleneck was never generation. It is the cable, and the patience of the people who did not build it.',de:'Das Nadelöhr war nie die Erzeugung. Es ist das Kabel — und die Geduld derer, die es nicht gebaut haben.',zh:'瓶颈从来不是发电，而是那条线路，以及那些没有把它建起来的人的耐心。'}
+ ],
+ aemo:[
+  {k:'run',en:'South Australia running past 100% renewable and curtailing the surplus. Spot at −A$68.',de:'Südaustralien über 100 % erneuerbar, Überschuss wird abgeregelt. Spot bei −68 A$.',zh:'南澳可再生能源出力超过 100%，过剩部分被弃。现货价 −68 澳元。'},
+  {k:'stop',en:'Interconnector constrained, price spiking. Batteries are discharging. You should be off.',de:'Kuppelleitung überlastet, Preisspitze. Die Speicher entladen. Du solltest aus sein.',zh:'联络线受阻，电价飙升。储能正在放电。你应该停机。'},
+  {k:'info',en:'The duck here is not a curve anymore. It is a canyon.',de:'Die Kurve ist hier keine Kurve mehr. Sie ist ein Abgrund.',zh:'这里的鸭子曲线已经不是曲线了，是一道峡谷。'}
+ ]
+};
+let feedN=0,seedAge=0;
+function renderFeed(reset){
+  const list=document.getElementById('feedList');
+  if(reset){list.innerHTML='';feedN=0;seedAge=34;}
+  const src=POSTS[cur],p=src[feedN%src.length];
+  const t=new Date(Date.now()-seedAge*60000);
+  if(seedAge>0)seedAge=Math.max(0,seedAge-17);
+  const tagTxt={run:{en:'Run',de:'Laufen',zh:'开机'},stop:{en:'Shut down',de:'Abschalten',zh:'停机'},info:{en:'Context',de:'Kontext',zh:'背景'}}[p.k][L];
+  const alt=L==='en'?p.zh:L==='zh'?p.en:p.en;
+  const n=document.createElement('div');n.className='post';
+  n.innerHTML=`<div class="post-meta"><span class="who">ÜberWatt</span><span class="tag ${p.k}">${tagTxt}</span><span class="num" style="margin-left:auto">${t.toTimeString().slice(0,5)}</span></div>
+    <div class="body">${p[L]}</div><div class="alt">${alt}</div>
+    <div class="data num"><span>${R[cur].name.split(' · ')[0]}</span><span>source: operator feed</span></div>`;
+  list.insertBefore(n,list.firstChild);feedN++;
+  while(list.children.length>7)list.removeChild(list.lastChild);
+}
+
+/* ═══ allocation ═══ */
+const ALLOC=[
+ {v:78,c:'#1B5E20',n:{en:'Fair launch',de:'Fairer Start',zh:'公平发行'},d:{en:'Sold through the bonding curve. No presale, no insider allocation before public trading opens.',de:'Über die Bonding Curve verkauft. Kein Vorverkauf, keine Insider-Zuteilung vor dem öffentlichen Handel.',zh:'通过联合曲线发行。无预售，公开交易开始前不向内部人分配。'}},
+ {v:8,c:'#2E7D32',n:{en:'Contributor pool',de:'Beitragspool',zh:'贡献者池'},d:{en:'Paid to people who submit and verify missed windows. Vests over time, not unlocked at launch.',de:'Für alle, die übersehene Fenster einreichen und prüfen. Vestet über die Zeit, nicht beim Start freigeschaltet.',zh:'发放给提交与核实遗漏窗口的人。按时间线性解锁，不在发行时释放。'}},
+ {v:9,c:'#7FB800',n:{en:'Treasury',de:'Schatzkammer',zh:'金库'},d:{en:'Grid data access, hosting, and the engineering to integrate each new operator. Spending published monthly.',de:'Datenzugang, Hosting und die Entwicklung für jeden neuen Betreiber. Ausgaben monatlich veröffentlicht.',zh:'电网数据接入、服务器，以及接入每张新电网的工程投入。支出按月公开。'}},
+ {v:5,c:'#C4501C',n:{en:'Team',de:'Team',zh:'团队'},d:{en:'Locked, long vesting. Kept deliberately small — a large team allocation is the fastest way to lose trust here.',de:'Gesperrt, lange Vesting-Frist. Bewusst klein gehalten — eine große Team-Zuteilung ist der schnellste Weg, Vertrauen zu verlieren.',zh:'锁仓，长期线性释放。刻意压得很小——团队份额过大是这里失去信任最快的方式。'}}
+];
+function alloc(){
+  const bar=document.getElementById('abar'),list=document.getElementById('alist');
+  bar.innerHTML=ALLOC.map((a,i)=>`<div style="flex:${a.v};background:${a.c}" data-i="${i}" title="${a.n[L]} ${a.v}%"></div>`).join('');
+  list.innerHTML=ALLOC.map((a,i)=>`<button class="aitem" data-x="${i}"><i style="background:${a.c}"></i><span>${a.n[L]}</span><b>${a.v}%</b><span class="note">${a.d[L]}</span></button>`).join('');
+  const sel=i=>{document.querySelectorAll('.aitem').forEach(e=>e.classList.toggle('on',+e.dataset.x===i));
+                bar.querySelectorAll('div').forEach(e=>e.classList.toggle('on',+e.dataset.i===i));};
+  list.querySelectorAll('.aitem').forEach(e=>e.onclick=()=>sel(+e.dataset.x));
+  bar.querySelectorAll('div').forEach(e=>e.onclick=()=>sel(+e.dataset.i));
+  sel(0);
+}
+
+/* ═══ misc ═══ */
+function burn(){
+  const now=new Date();
+  const n=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
+  n.setUTCDate(n.getUTCDate()+((7-n.getUTCDay())%7||7));
+  let s=Math.max(0,Math.floor((n-now)/1000));
+  const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60);s-=m*60;
+  bd.textContent=d;bh.textContent=String(h).padStart(2,'0');bm.textContent=String(m).padStart(2,'0');bs.textContent=String(s).padStart(2,'0');
+}
+const noMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function count(id,to,suf){
+  const e=document.getElementById(id);
+  if(noMotion){e.textContent=fmt(to)+suf;return;}
+  const st=performance.now();
+  const go=t=>{const k=Math.min(1,(t-st)/1300);e.textContent=fmt(to*(1-Math.pow(1-k,3)))+suf;if(k<1)requestAnimationFrame(go);};
+  requestAnimationFrame(go);
+}
+function pick(id){return document.querySelector('#'+id+' .chip[aria-pressed="true"]');}
+function preview(){
+  const g=pick('bGrid').dataset.v,t=pick('bTrig').dataset.v,ch=pick('bChan').dataset.v,c=R[cur];
+  const M={en:{below:`${g} price dropped below your breakeven of ${c.ccy}${BE}. Start your load now.`,
+               negative:`${g} price is negative. You are being paid to consume.`,
+               spike:`${g} peak spike. Shut down — the grid is worth more than your output right now.`,
+               foot:'delivered within 60s of detection · source link attached'},
+         de:{below:`${g}-Preis unter deine Gewinnschwelle von ${c.ccy}${BE} gefallen. Last jetzt starten.`,
+               negative:`${g}-Preis ist negativ. Du wirst fürs Verbrauchen bezahlt.`,
+               spike:`${g}-Preisspitze. Abschalten — das Netz ist gerade mehr wert als dein Output.`,
+               foot:'binnen 60 s nach Erkennung · Quellenlink beigefügt'},
+         zh:{below:`${g} 电价已跌破你 ${c.ccy}${BE} 的盈亏平衡点。立即启动负荷。`,
+               negative:`${g} 电价转负。用电即获得收益。`,
+               spike:`${g} 出现尖峰电价。停机——此刻电网的价值高于你的产出。`,
+               foot:'检测后 60 秒内送达 · 附数据来源链接'}}[L];
+  document.getElementById('bPreview').innerHTML=`<b>ÜberWatt → ${ch}</b><br>${M[t]}<br><span class="num" style="color:var(--ink-3);font-size:12.5px">${M.foot}</span>`;
+}
+function chipGroup(id){
+  const g=document.getElementById(id);
+  g.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    g.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed','false'));
+    c.setAttribute('aria-pressed','true');preview();});
+}
+function hookChart(){
+  const svg=document.getElementById('curve'),tip=document.getElementById('tip');
+  const move=e=>{
+    const r=svg.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY;
+    let i=Math.round((((cx-r.left)/r.width*W)-PL)/(W-PL-PR)*47);
+    idx=Math.max(0,Math.min(47,i));draw();paint();
+    const p=D[idx],c=R[cur];
+    tip.style.opacity=1;
+    tip.innerHTML=`<b>${hhmm(idx)}</b> · ${money(p.price,c.ccy)}/MWh<br>${p.price<BE?({en:'run',de:'laufen',zh:'开机'})[L]:({en:'shut down',de:'abschalten',zh:'停机'})[L]}`;
+    const box=svg.closest('.console').getBoundingClientRect();
+    tip.style.left=Math.min(box.width-170,Math.max(8,cx-box.left+14))+'px';
+    tip.style.top=(cy-box.top+14)+'px';
+  };
+  svg.addEventListener('mousemove',move);
+  svg.addEventListener('touchmove',e=>{move(e);e.preventDefault()},{passive:false});
+  svg.addEventListener('mouseleave',()=>tip.style.opacity=0);
+}
+
+/* ═══ wiring ═══ */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+  t.setAttribute('aria-selected','true');cur=t.dataset.r;D=build(cur);
+  draw();paint();schedule();renderFeed(true);preview();
+});
+document.querySelectorAll('.langsel button').forEach(b=>b.onclick=()=>applyLang(b.dataset.l));
+vPrice.onclick=()=>{view='price';vPrice.setAttribute('aria-pressed','true');vLoad.setAttribute('aria-pressed','false');draw();};
+vLoad.onclick=()=>{view='load';vLoad.setAttribute('aria-pressed','true');vPrice.setAttribute('aria-pressed','false');draw();};
+be.oninput=e=>{BE=+e.target.value;draw();paint();schedule();preview();};
+mw.oninput=e=>{MW=+e.target.value;paint();schedule();};
+chipGroup('bGrid');chipGroup('bTrig');chipGroup('bChan');
+
+const nw=new Date();idx=Math.min(47,nw.getHours()*2+(nw.getMinutes()>=30?1:0));
+draw();paint();schedule();hookChart();alloc();preview();
+renderFeed(true);renderFeed();renderFeed();
+setInterval(renderFeed,9000);burn();setInterval(burn,1000);
+count('s1',6120,' GWh');count('s2',2480,' hrs');count('s3',11,' min');
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,150);});
+</script>
+</body>
+</html>
