@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Lang, T } from '../i18n/translations';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface AgentFeedProps {
   lang: Lang;
   grid: string;
@@ -33,7 +35,7 @@ export const AgentFeedSection: React.FC<AgentFeedProps> = ({ lang, grid, be }) =
   useEffect(() => {
     async function fetchFeed() {
       try {
-        const res = await fetch(`http://localhost:8000/v1/feed?grid=${grid}&limit=5`);
+        const res = await fetch(`${API_BASE_URL}/v1/feed?grid=${grid}&limit=5`);
         if (res.ok) {
           const data = await res.json();
           setPosts(data);

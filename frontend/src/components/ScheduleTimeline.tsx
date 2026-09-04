@@ -5,6 +5,8 @@ import { Lang, T } from '../i18n/translations';
 import { REGIONS, buildGridData } from './ConsoleWidget';
 import { DataPoint } from './SVGPriceChart';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface ScheduleTimelineProps {
   lang: Lang;
   grid: string;
@@ -26,7 +28,7 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({
   useEffect(() => {
     async function fetchSchedule() {
       try {
-        const res = await fetch(`http://localhost:8000/v1/grids/${grid}/day`);
+        const res = await fetch(`${API_BASE_URL}/v1/grids/${grid}/day`);
         if (res.ok) {
           const apiBlocks = await res.json();
           const parsedPoints: DataPoint[] = apiBlocks.map((b: any, idx: number) => ({

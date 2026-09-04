@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Lang, T } from '../i18n/translations';
 import { SVGPriceChart, DataPoint } from './SVGPriceChart';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export interface GridConfig {
   key?: string;
   name: string;
@@ -88,7 +90,7 @@ export const ConsoleWidget: React.FC<ConsoleWidgetProps> = ({
     async function fetchApiData() {
       try {
         // 1. Fetch current price & signal state from API
-        const currRes = await fetch(`http://localhost:8000/v1/grids/${grid}/current`);
+        const currRes = await fetch(`${API_BASE_URL}/v1/grids/${grid}/current`);
         if (currRes.ok) {
           const currData = await currRes.json();
           setApiSignal(currData.signal);
@@ -96,7 +98,7 @@ export const ConsoleWidget: React.FC<ConsoleWidgetProps> = ({
         }
 
         // 2. Fetch 48 half-hour schedule blocks from API
-        const dayRes = await fetch(`http://localhost:8000/v1/grids/${grid}/day`);
+        const dayRes = await fetch(`${API_BASE_URL}/v1/grids/${grid}/day`);
         if (dayRes.ok) {
           const apiBlocks = await dayRes.json();
           const parsedPoints: DataPoint[] = apiBlocks.map((b: any, idx: number) => ({

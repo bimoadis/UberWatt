@@ -9,6 +9,8 @@ import { AgentFeedSection } from '../components/AgentFeed';
 import { TokenSection } from '../components/TokenSection';
 import { Footer } from '../components/Footer';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function Home() {
   const [lang, setLang] = useState<Lang>('en');
   const [grid, setGrid] = useState<string>('ercot');
@@ -18,7 +20,6 @@ export default function Home() {
 
   // Data Staleness & Poller Monitoring State
   const [isStale, setIsStale] = useState<boolean>(false);
-  const [pollerStatus, setPollerStatus] = useState<string>('HEALTHY');
 
   // Set html lang attribute dynamically
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function Home() {
   useEffect(() => {
     async function checkGridHealth() {
       try {
-        const res = await fetch(`http://localhost:8000/v1/grids/${grid}/current`);
+        const res = await fetch(`${API_BASE_URL}/v1/grids/${grid}/current`);
         if (res.ok) {
           const data = await res.json();
           const fetchedAt = new Date(data.fetched_at).getTime();
