@@ -2,8 +2,7 @@
 const CACHE_NAME = 'uberwatt-v1';
 const STATIC_ASSETS = [
   '/',
-  '/manifest.json',
-  '/globals.css'
+  '/manifest.json'
 ];
 
 // Install Event - Pre-cache Static Assets
@@ -78,15 +77,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. App Shell: Stale-While-Revalidate
+  // 3. App Shell & Static Assets: Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-        });
+        if (networkResponse.ok) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+          });
+        }
         return networkResponse;
-      });
+      }).catch(() => cachedResponse);
       return cachedResponse || fetchPromise;
     })
   );

@@ -1,10 +1,13 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'ÜberWatt — run when power is free. Stop when it is not.',
   description: 'Real-time grid signals for flexible power loads. Watch ERCOT, CAISO, and global power markets with verifiable Solana proof on-chain.',
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: '#2E7D32',
 };
 
@@ -17,7 +20,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#2E7D32" />
       </head>
       <body>
         {children}
